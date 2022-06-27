@@ -1,13 +1,28 @@
 'use strict';
-
-const events = require("../events");
+require('dotenv').config();
+const PORT = process.env.PORT || 3030;
+const ioServer = require('socket.io')(PORT);
 const { faker } = require('@faker-js/faker');
-require('../pilot/pilot');
 
-events.on('new-flight', flightDetails1);
-events.on('took-off', flightDetails2);
-events.on('Arrived', flightDetails3);
+const tookOff = ioServer.of('/airline');
 
+tookOff.on('connection', (socket) => {
+  socket.on('new-flight', () => {
+    tookOff.emit('new-flight');
+  });
+  socket.on('took-off', flightDetails2);
+});
+
+ioServer.on('connection', (socket) => {
+  socket.on('new-flight', () => {
+    flightDetails1();
+    ioServer.emit('new-flight');
+  });
+  socket.on('Arrived', flightDetails3);
+  socket.on('Arrived', () => {
+    ioServer.emit('Arrived');
+  });
+});
 
 function flightDetails1() {
   let flightDetails01 = {
@@ -15,7 +30,7 @@ function flightDetails1() {
       event: 'new-flight',
       time: faker.date.past(),
       Details: {
-        airLine: 'Air Arabia Airlines',
+        airLine: 'Qatar Airways',
         destination: faker.address.city(),
         pilot: faker.internet.userName(),
         flightID: faker.datatype.uuid(),
@@ -30,7 +45,7 @@ function flightDetails2() {
       event: 'took_off',
       time: faker.date.past(),
       Details: {
-        airLine: 'Air Arabia Airlines',
+        airLine: 'Qatar Airways',
         destination: faker.address.city(),
         pilot: faker.internet.userName(),
         flightID: faker.datatype.uuid(),
@@ -45,7 +60,7 @@ function flightDetails3() {
       event: 'arrived',
       time: faker.date.past(),
       Details: {
-        airLine: 'Air Arabia Airlines',
+        airLine: 'Qatar Airways',
         destination: faker.address.city(),
         pilot: faker.internet.userName(),
         flightID: faker.datatype.uuid(),
