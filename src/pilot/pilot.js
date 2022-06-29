@@ -1,24 +1,29 @@
-'use strict';
-require('dotenv').config();
-const io = require('socket.io-client');
-const host = `http://localhost:${process.env.PORT}`;
-const { faker } = require('@faker-js/faker');
-let ID = faker.datatype.uuid();
+"use strict";
+require("dotenv").config();
+const io = require("socket.io-client");
+let PORT = process.env.PORT;
+let host = `http://localhost:${PORT}`;
+let pioletConnection = io.connect(`${host}/airline`);
+let pioletConnectionBase = io.connect(`${host}`);
 
-const events_airline = io.connect(`${host}/airline`); 
-const events = io.connect(host);
+console.log(`piolt listining on ${PORT}`);
 
-events_airline.on('new-flight', () => {
-  setTimeout(() => {
-    let tookOff = `Pilot: flight with ID ${ID} took-off`;
-    console.log(tookOff);
-    events_airline.emit('took-off', tookOff);
-  }, 4000);
+pioletConnectionBase.emit("get_all");
+
+pioletConnectionBase.on("new-flight", arriveHandler);
+function arriveHandler(payload) {
+  payload.events = "arrived";
+  console.log(` Pilot: flight with ID ${payload.Details.flightID} has arrived`);
+  pioletConnectionBase.emit("flightArrived", payload);
+}
+pioletConnectionBase.on("flight", (payload) => {
+  console.log("piolt base")
+  // console.log(payload) 
+  console.log(`Pilot:Sorry i didn't catch this flight ID ${payload.payload.Details.flightID}`  );
+  pioletConnectionBase.emit("delete",payload)
 });
-events.on('new-flight', () => {
-  setTimeout(() => {
-    let arrived = `Pilot: flight with ID ${ID} has arrived`;
-    console.log(arrived);
-    events.emit('Arrived', arrived);
-  }, 7000);
-});
+pioletConnection.on("took-off", tookOffHandler);
+function tookOffHandler(payload) {
+  payload.event = "took-off";
+  console.log(` Pilot: flight with ID ${payload.Details.flightID} took-off`);
+}
