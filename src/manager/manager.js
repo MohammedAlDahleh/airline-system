@@ -1,25 +1,35 @@
 'use strict';
 require('dotenv').config();
-
 const io = require('socket.io-client');
-const host = `http://localhost:${process.env.PORT}`;
-const { faker } = require('@faker-js/faker');
+let PORT =process.env.PORT
+let host = `http://localhost:${PORT}/`;
 
 
-let ID = faker.datatype.uuid();
-let pilot = faker.internet.userName();
+const { v4: uuidv4 } = require('uuid');
+const {faker} = require('@faker-js/faker');
 
-const events_airline = io.connect(`${host}/airline`);
-const events = io.connect(host);
+const managerConnection = io.connect(host);
+
+console.log(`manager listing on port ${PORT}`);
 
 setInterval(() => {
-  let manager1 = `Manager: new flight with ID ${ID} have been scheduled`;
-  console.log(manager1);
-  events_airline.emit('new-flight');
-  events.emit('new-flight');
-}, 10000);
+    let pioletName = faker.name.findName();
+let destination=faker.address.cityName();
 
-events.on('Arrived', manager2);
-function manager2() {
-  console.log(`Manager: we are greatly thankful for the amazing flight, ${pilot}`);
-}
+
+    let flight=
+    {
+        events:"new-flight",
+        time: new Date().toISOString().replace(/T/, ' ').replace(/\..+/, ''),
+        Details:{
+            airLine: 'Amman Airlines',
+            flightID:uuidv4(),
+            pioletName:pioletName,
+            destination:destination
+        },        
+    }
+    console.log(`Manager: new flight with ID ${flight.Details.flightID} have been scheduled`);
+    console.log(`Manager: we’re greatly thankful for the amazing flight, ${flight.Details.pioletName}`)
+    managerConnection.emit("new-flight",flight);
+    
+},10000)

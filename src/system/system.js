@@ -1,71 +1,51 @@
-'use strict';
-require('dotenv').config();
+"use strict";
+require("dotenv").config();
 const PORT = process.env.PORT || 3030;
-const ioServer = require('socket.io')(PORT);
-const { faker } = require('@faker-js/faker');
 
-const tookOff = ioServer.of('/airline');
+const ioServer = require("socket.io")(PORT);
+const io = require("socket.io-client");
 
-tookOff.on('connection', (socket) => {
-  socket.on('new-flight', () => {
-    tookOff.emit('new-flight');
+const airline = ioServer.of("/airline");  //namespace
+let host = `http://localhost:${PORT}`;
+const airLineConnection = io.connect(`${host}/airline`);
+const queue = { flights: {} };
+
+const { v4: uuidv4 } = require("uuid");
+console.log(`system listining on port ${PORT}`)
+
+airline.on("connection", (socket) => {
+ 
+  socket.on("flight", (payload) => {
+    payload.events = "took-off";
+    console.log(payload);
+    console.log("*************************")
+    airline.emit("took-off", payload);
   });
-  socket.on('took-off', flightDetails2);
 });
-
-ioServer.on('connection', (socket) => {
-  socket.on('new-flight', () => {
-    flightDetails1();
-    ioServer.emit('new-flight');
+ioServer.on("connection", (socket) => {
+  socket.on("new-flight", (payload) => {
+    console.log(payload);
+    let id = uuidv4();
+    queue.flights[id] = payload;
+    setTimeout(function () {
+      
+      ioServer.emit("new-flight", payload);
+    }, 3000);
   });
-  socket.on('Arrived', flightDetails3);
-  socket.on('Arrived', () => {
-    ioServer.emit('Arrived');
+  socket.on("flightArrived", (payload) => {
+    payload.events = "arrived";
+    console.log(payload);
+
+    setTimeout(function () {
+      airLineConnection.emit("flight", payload);
+    }, 4000);
+  });
+  socket.on("get_all", (payload) => {
+    Object.keys(queue.flights).forEach((id) => {
+      socket.emit("flight", { id: id, payload: queue.flights[id] });
+    });
+  });
+  socket.on("delete",(payload)=>{
+delete queue.flights[payload.id];
   });
 });
-
-function flightDetails1() {
-  let flightDetails01 = {
-    Flight: {
-      event: 'new-flight',
-      time: faker.date.past(),
-      Details: {
-        airLine: 'Qatar Airways',
-        destination: faker.address.city(),
-        pilot: faker.internet.userName(),
-        flightID: faker.datatype.uuid(),
-      },
-    },
-  };
-  console.log(flightDetails01);
-}
-function flightDetails2() {
-  let flightDetails02 = {
-    Flight: {
-      event: 'took_off',
-      time: faker.date.past(),
-      Details: {
-        airLine: 'Qatar Airways',
-        destination: faker.address.city(),
-        pilot: faker.internet.userName(),
-        flightID: faker.datatype.uuid(),
-      },
-    },
-  };
-  console.log(flightDetails02);
-}
-function flightDetails3() {
-  let flightDetails03 = {
-    Flight: {
-      event: 'arrived',
-      time: faker.date.past(),
-      Details: {
-        airLine: 'Qatar Airways',
-        destination: faker.address.city(),
-        pilot: faker.internet.userName(),
-        flightID: faker.datatype.uuid(),
-      },
-    },
-  };
-  console.log(flightDetails03);
-}
